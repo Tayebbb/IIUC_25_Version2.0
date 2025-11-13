@@ -14,13 +14,13 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { user, login, signInWithGoogle } = useAuth();
+  const { user: currentUser, login, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) navigate('/dashboard');
-  }, [user, navigate]);
+    if (currentUser) navigate('/dashboard');
+  }, [currentUser, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,7 +29,7 @@ const Login = () => {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      navigate('/dashboard'); // Redirect to dashboard after login
     } catch (error) {
       setError('Failed to log in: ' + error.message);
     }

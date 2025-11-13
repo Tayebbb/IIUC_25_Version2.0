@@ -3,163 +3,181 @@
  * Browse learning resources and courses
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, ExternalLink, BookOpen, Filter as FilterIcon } from "lucide-react";
+import { Search, ExternalLink, BookOpen, Filter as FilterIcon, Video, FileText, Link as LinkIcon } from 'lucide-react';
 import { resourcesService } from '../services/firestoreService';
-import toast from "react-hot-toast";
 
 const Resources = () => {
   const [resources, setResources] = useState([]);
-  const [filteredResources, setFilteredResources] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    search: '',
-    cost: '',
-    platform: '',
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const categories = ['All', 'Articles', 'Videos', 'Courses', 'Tools', 'Templates', 'Guides'];
 
   useEffect(() => {
-    // Replace old API call
     const loadResources = async () => {
-      setLoading(true);
       try {
         const resourcesData = await resourcesService.getAllResources();
         setResources(resourcesData);
       } catch (error) {
         console.error('Error loading resources:', error);
-        toast.error("Failed to load resources");
+        // Set some sample data if Firestore is empty
+        setResources([
+          {
+            id: 1,
+            title: 'Resume Writing Guide',
+            description: 'Complete guide to writing a professional resume that gets noticed by employers.',
+            category: 'Guides',
+            type: 'article',
+            url: '#',
+            tags: ['resume', 'career', 'job search']
+          },
+          {
+            id: 2,
+            title: 'Interview Preparation Checklist',
+            description: 'Essential checklist to prepare for your next job interview.',
+            category: 'Templates',
+            type: 'template',
+            url: '#',
+            tags: ['interview', 'preparation', 'career']
+          },
+          {
+            id: 3,
+            title: 'JavaScript Fundamentals Course',
+            description: 'Learn JavaScript from basics to advanced concepts with hands-on projects.',
+            category: 'Courses',
+            type: 'course',
+            url: '#',
+            tags: ['javascript', 'programming', 'web development']
+          },
+          {
+            id: 4,
+            title: 'LinkedIn Profile Optimization',
+            description: 'Video tutorial on how to optimize your LinkedIn profile for maximum visibility.',
+            category: 'Videos',
+            type: 'video',
+            url: '#',
+            tags: ['linkedin', 'networking', 'profile']
+          }
+        ]);
       }
       setLoading(false);
     };
 
     loadResources();
-  }, [selectedCategory]);
+  }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [filters, resources]);
+  const filteredResources = resources.filter(resource => {
+    const matchesCategory = selectedCategory === 'All' || resource.category === selectedCategory;
+    const matchesSearch = !searchTerm || 
+      resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resource.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resource.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    return matchesCategory && matchesSearch;
+  });
 
-  const applyFilters = () => {
-    let result = resources;
-
-    if (filters.search) {
-      result = result.filter(resource =>
-        resource.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        resource.description.toLowerCase().includes(filters.search.toLowerCase())
-      );
+  const getResourceIcon = (type) => {
+    switch (type) {
+      case 'video':
+        return <Video size={20} className="text-red-500" />;
+      case 'course':
+        return <BookOpen size={20} className="text-blue-500" />;
+      case 'template':
+        return <FileText size={20} className="text-green-500" />;
+      default:
+        return <LinkIcon size={20} className="text-gray-500" />;
     }
-
-    if (filters.cost) {
-      result = result.filter(resource => resource.cost === filters.cost);
-    }
-
-    if (filters.platform) {
-      result = result.filter(resource =>
-        resource.platform.toLowerCase().includes(filters.platform.toLowerCase())
-      );
-    }
-
-    setFilteredResources(result);
-  };
-
-  const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
   return (
-    <div className="page-padding bg-bg-muted dark:bg-gray-900">
-      <div className="section-container">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="font-heading text-4xl font-bold mb-2">Learning Resources</h1>
-          <p className="text-text-muted">Discover {resources.length}+ courses and tutorials to boost your skills</p>
-        </motion.div>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen py-12 px-4"
+    >
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold mb-4">Career Resources</h1>
+          <p className="text-lg text-gray-600">Helpful resources to boost your career and skills</p>
+        </div>
 
-        {/* Filters */}
-        <div className="card p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={20} />
+        {/* Search and Filter */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
-                name="search"
                 type="text"
-                value={filters.search}
-                onChange={handleFilterChange}
                 placeholder="Search resources..."
-                className="input-field pl-11"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+          </div>
 
-            <select name="cost" value={filters.cost} onChange={handleFilterChange} className="input-field">
-              <option value="">All Costs</option>
-              <option value="Free">Free</option>
-              <option value="Paid">Paid</option>
-              <option value="Freemium">Freemium</option>
-            </select>
-
-            <input
-              name="platform"
-              type="text"
-              value={filters.platform}
-              onChange={handleFilterChange}
-              placeholder="Platform (e.g., Coursera, Udemy)"
-              className="input-field"
-            />
+          {/* Category Filter */}
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === category
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Results */}
+        {/* Resources Grid */}
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading resources...</p>
           </div>
-        ) : filteredResources.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredResources.map((resource, index) => (
-              <motion.div
-                key={resource._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <div className="card p-6 h-full flex flex-col hover:shadow-lift transition-all">
-                  <div className="flex items-start justify-between mb-3">
-                    <BookOpen className="text-primary flex-shrink-0" size={24} />
-                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                      resource.cost === 'Free' ? 'bg-green-100 text-green-700' :
-                      resource.cost === 'Paid' ? 'bg-orange-100 text-orange-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>
-                      {resource.cost}
-                    </span>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredResources.length > 0 ? (
+              filteredResources.map(resource => (
+                <motion.div
+                  key={resource.id}
+                  whileHover={{ y: -5 }}
+                  className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      {getResourceIcon(resource.type)}
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        {resource.category}
+                      </span>
+                    </div>
+                    <ExternalLink size={16} className="text-gray-400" />
                   </div>
 
-                  <h3 className="font-heading text-lg font-semibold mb-2">{resource.title}</h3>
-                  <p className="text-sm text-text-muted mb-3">{resource.platform}</p>
-                  <p className="text-sm text-text-muted mb-4 flex-1 line-clamp-3">{resource.description}</p>
+                  <h3 className="text-xl font-semibold mb-3">{resource.title}</h3>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                    {resource.description}
+                  </p>
 
-                  <div className="mb-4">
-                    <div className="flex flex-wrap gap-2">
-                      {resource.relatedSkills.slice(0, 3).map((skill) => (
-                        <span key={skill} className="px-2 py-1 bg-bg-muted text-xs rounded">
-                          {skill}
+                  {resource.tags && (
+                    <div className="flex flex-wrap gap-1 mb-4">
+                      {resource.tags.slice(0, 3).map((tag, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+                        >
+                          #{tag}
                         </span>
                       ))}
-                      {resource.relatedSkills.length > 3 && (
-                        <span className="px-2 py-1 text-xs text-text-muted">
-                          +{resource.relatedSkills.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {resource.matchReason && (
-                    <div className="text-xs text-primary bg-primary/5 px-3 py-2 rounded-lg mb-3">
-                      {resource.matchReason}
                     </div>
                   )}
 
@@ -167,24 +185,21 @@ const Resources = () => {
                     href={resource.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-primary flex items-center justify-center space-x-2 mt-auto"
+                    className="block text-center bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    <span>View Resource</span>
-                    <ExternalLink size={16} />
+                    Access Resource
                   </a>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        ) : (
-          <div className="card p-12 text-center">
-            <FilterIcon className="mx-auto mb-4 text-text-muted" size={48} />
-            <h3 className="font-heading text-xl font-semibold mb-2">No resources found</h3>
-            <p className="text-text-muted">Try adjusting your filters</p>
+                </motion.div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-600 text-lg">No resources found. Try adjusting your search or filter.</p>
+              </div>
+            )}
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, ArrowRight, GraduationCap, Briefcase, Target } from 'lucide-react';
+import { User, Mail, Lock, ArrowRight, GraduationCap, Briefcase, Target, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Register = () => {
@@ -20,7 +20,7 @@ const Register = () => {
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { currentUser, signup } = useAuth();
+  const { currentUser, signup, logout } = useAuth();
 
   useEffect(() => {
     if (currentUser) navigate('/dashboard');
@@ -41,12 +41,21 @@ const Register = () => {
     setLoading(true);
     try {
       await signup(formData.email, formData.password, formData.name);
-      // Additional profile data can be saved separately to Firestore
+      // Redirect to dashboard instead of home
       navigate('/dashboard');
     } catch (error) {
       console.error('Registration error:', error);
     }
     setLoading(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const educationOptions = ['High School', 'Undergraduate', 'Graduate', 'Postgraduate', 'Other'];
@@ -62,6 +71,38 @@ const Register = () => {
     'Business',
     'Other',
   ];
+
+  // If user is already logged in, show logout option
+  if (currentUser) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full text-center"
+        >
+          <div className="card p-8">
+            <h2 className="text-2xl font-bold mb-4">Already Logged In</h2>
+            <p className="text-gray-600 mb-6">
+              You are already logged in as {currentUser.displayName || currentUser.email}
+            </p>
+            <div className="space-y-4">
+              <Link to="/dashboard" className="w-full btn-primary block">
+                Go to Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="w-full btn-secondary flex items-center justify-center space-x-2"
+              >
+                <LogOut size={18} />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-bg-muted dark:bg-gray-900">

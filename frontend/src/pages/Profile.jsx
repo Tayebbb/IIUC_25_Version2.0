@@ -5,26 +5,24 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, X, Plus } from 'lucide-react';
+import { User, Mail, Edit, Save, X, GraduationCap, Briefcase, Target } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { userService } from '../services/firestoreService';
-import toast from 'react-hot-toast';
+import { userService, applicationsService } from '../services/firestoreService';
 
 const Profile = () => {
   const { currentUser } = useAuth();
   const [profile, setProfile] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    education: '',
-    experienceLevel: '',
-    careerTrack: '',
-    skills: [],
-    experienceDesc: '',
-    careerInterests: '',
-    cvText: '',
-  });
-  const [newSkill, setNewSkill] = useState('');
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    bio: '',
+    skills: [],
+    experience: '',
+    location: '',
+    education: '',
+    careerTrack: ''
+  });
 
   useEffect(() => {
     if (currentUser) {
@@ -34,212 +32,280 @@ const Profile = () => {
 
   const loadUserData = async () => {
     try {
-      const profileData = await userService.getUserProfile(currentUser.uid);
+      const [profileData, applicationsData] = await Promise.all([
+        userService.getUserProfile(currentUser.uid),
+        applicationsService.getUserApplications(currentUser.uid)
+      ]);
+      
       setProfile(profileData);
-      setFormData({
-        name: profileData.name || '',
-        education: profileData.education || 'Undergraduate',
-        experienceLevel: profileData.experienceLevel || 'Student',
-        careerTrack: profileData.careerTrack || 'Web Development',
-        skills: profileData.skills || [],
-        experienceDesc: profileData.experienceDesc || '',
-        careerInterests: profileData.careerInterests || '',
-        cvText: profileData.cvText || '',
-      });
+      setApplications(applicationsData);
+      
+      // Set form data for editing
+      if (profileData?.profile) {
+        setFormData({
+          bio: profileData.profile.bio || '',
+          skills: profileData.profile.skills || [],
+          experience: profileData.profile.experience || '',
+          location: profileData.profile.location || '',
+          education: profileData.profile.education || '',
+          careerTrack: profileData.profile.careerTrack || ''
+        });
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
     }
     setLoading(false);
   };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const addSkill = () => {
-    if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
-      setFormData({ ...formData, skills: [...formData.skills, newSkill.trim()] });
-      setNewSkill('');
-    }
-  };
-
-  const removeSkill = (skillToRemove) => {
-    setFormData({ ...formData, skills: formData.skills.filter(s => s !== skillToRemove) });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const handleUpdateProfile = async (updatedData) => {
     try {
-      const response = await api.put(`/users/${user._id}`, formData);
-      updateUser(response.data);
-      toast.success('Profile updated successfully!');
+      await userService.updateProfile(currentUser.uid, updatedData);
+      setProfile(prev => ({ ...prev, profile: updatedData }));
+      setEditing(false);
     } catch (error) {
-      toast.error('Failed to update profile');
-    } finally {
-      setLoading(false);
+      console.error('Error updating profile:', error);
     }
   };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleUpdateProfile(formData);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'skills') {
+      setFormData(prev => ({
+        ...prev,
+        skills: value.split(',').map(skill => skill.trim())
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="page-padding bg-bg-muted dark:bg-gray-900">
-      <div className="section-container max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="font-heading text-3xl font-bold mb-2">Edit Profile</h1>
-          <p className="text-text-muted">Update your information to get better job recommendations</p>
-        </motion.div>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen py-12 px-4"
+    >
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
+                <User size={32} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold">{currentUser?.displayName || 'User'}</h1>
+                <p className="text-gray-600 flex items-center">
+                  <Mail size={16} className="mr-2" />
+                  {currentUser?.email}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setEditing(!editing)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              {editing ? <X size={16} /> : <Edit size={16} />}
+              <span>{editing ? 'Cancel' : 'Edit Profile'}</span>
+            </button>
+          </div>
 
-        <div className="card p-8">
-          {loading ? (
-            <div>Loading profile...</div>
-          ) : (
+          {/* Profile Form */}
+          {editing ? (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Basic Info */}
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Full Name</label>
+                  <label className="block text-sm font-medium mb-2">
+                    <GraduationCap size={16} className="inline mr-1" />
+                    Education
+                  </label>
                   <input
-                    name="name"
                     type="text"
-                    value={formData.name}
+                    name="education"
+                    value={formData.education}
                     onChange={handleChange}
-                    className="input-field"
-                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Your education background"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Education</label>
-                  <select name="education" value={formData.education} onChange={handleChange} className="input-field">
-                    {['High School', 'Undergraduate', 'Graduate', 'Postgraduate', 'Other'].map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Experience Level</label>
-                  <select name="experienceLevel" value={formData.experienceLevel} onChange={handleChange} className="input-field">
-                    {['Student', 'Fresher', 'Junior', 'Mid-level', 'Senior'].map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Career Track</label>
-                  <select name="careerTrack" value={formData.careerTrack} onChange={handleChange} className="input-field">
-                    {['Web Development', 'Mobile Development', 'Data Science', 'UI/UX Design', 'Digital Marketing', 'Content Writing', 'Graphic Design', 'Business', 'Other'].map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Skills */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Skills</label>
-                <div className="flex gap-2 mb-3">
+                  <label className="block text-sm font-medium mb-2">
+                    <Target size={16} className="inline mr-1" />
+                    Career Track
+                  </label>
                   <input
                     type="text"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                    className="input-field flex-1"
-                    placeholder="Add a skill (e.g., JavaScript, Excel)"
+                    name="careerTrack"
+                    value={formData.careerTrack}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Your career focus"
                   />
-                  <button type="button" onClick={addSkill} className="btn-primary px-4">
-                    <Plus size={20} />
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {formData.skills.map((skill) => (
-                    <span key={skill} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm flex items-center space-x-2">
-                      <span>{skill}</span>
-                      <button type="button" onClick={() => removeSkill(skill)} className="hover:text-primary-dark">
-                        <X size={14} />
-                      </button>
-                    </span>
-                  ))}
                 </div>
               </div>
 
-              {/* Experience */}
               <div>
-                <label className="block text-sm font-medium mb-2">Experience Description</label>
+                <label className="block text-sm font-medium mb-2">Bio</label>
                 <textarea
-                  name="experienceDesc"
-                  value={formData.experienceDesc}
+                  name="bio"
+                  value={formData.bio}
                   onChange={handleChange}
-                  rows={3}
-                  className="input-field resize-none"
-                  placeholder="Briefly describe your experience, projects, or activities..."
+                  rows="4"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Tell us about yourself..."
                 />
               </div>
 
-              {/* Career Interests */}
               <div>
-                <label className="block text-sm font-medium mb-2">Career Interests</label>
-                <textarea
-                  name="careerInterests"
-                  value={formData.careerInterests}
+                <label className="block text-sm font-medium mb-2">Skills (comma-separated)</label>
+                <input
+                  type="text"
+                  name="skills"
+                  value={formData.skills.join(', ')}
                   onChange={handleChange}
-                  rows={2}
-                  className="input-field resize-none"
-                  placeholder="What are your career goals and interests?"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="JavaScript, React, Node.js, etc."
                 />
               </div>
 
-              {/* CV Text */}
-              <div>
-                <label className="block text-sm font-medium mb-2">CV / Resume (Paste Text)</label>
-                <textarea
-                  name="cvText"
-                  value={formData.cvText}
-                  onChange={handleChange}
-                  rows={6}
-                  className="input-field resize-none font-mono text-sm"
-                  placeholder="Paste your CV or resume content here for better matching..."
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    <Briefcase size={16} className="inline mr-1" />
+                    Experience Level
+                  </label>
+                  <input
+                    type="text"
+                    name="experience"
+                    value={formData.experience}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Student, Junior, Senior, etc."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="City, Country"
+                  />
+                </div>
               </div>
 
-              {/* Submit */}
-              <button type="submit" disabled={loading} className="btn-primary flex items-center space-x-2">
-                {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    <Save size={18} />
-                    <span>Save Changes</span>
-                  </>
-                )}
+              <button
+                type="submit"
+                className="flex items-center space-x-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Save size={16} />
+                <span>Save Changes</span>
               </button>
             </form>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold mb-2 flex items-center">
+                    <GraduationCap size={16} className="mr-2" />
+                    Education
+                  </h3>
+                  <p className="text-gray-600">{profile?.profile?.education || 'Not specified'}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2 flex items-center">
+                    <Target size={16} className="mr-2" />
+                    Career Track
+                  </h3>
+                  <p className="text-gray-600">{profile?.profile?.careerTrack || 'Not specified'}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Bio</h3>
+                <p className="text-gray-600">{profile?.profile?.bio || 'No bio available'}</p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  {profile?.profile?.skills?.length > 0 ? (
+                    profile.profile.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      >
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-gray-600">No skills added</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold mb-2 flex items-center">
+                    <Briefcase size={16} className="mr-2" />
+                    Experience
+                  </h3>
+                  <p className="text-gray-600">{profile?.profile?.experience || 'Not specified'}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">Location</h3>
+                  <p className="text-gray-600">{profile?.profile?.location || 'Not specified'}</p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Applications section */}
-        <div className="mt-8">
-          <h2 className="font-heading text-2xl font-bold mb-4">My Applications</h2>
-          {(!applications || applications.length === 0) ? (
-            <p className="text-text-muted">You have not applied to any jobs yet.</p>
+        {/* Applications Section */}
+        <div className="bg-white rounded-lg shadow-md p-8">
+          <h2 className="text-2xl font-bold mb-6">My Applications</h2>
+          {applications.length > 0 ? (
+            <div className="space-y-4">
+              {applications.map((app) => (
+                <div key={app.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold">Job ID: {app.jobId}</p>
+                      <p className="text-sm text-gray-600">
+                        Status: <span className="capitalize">{app.status}</span>
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Applied: {app.appliedAt?.toDate?.()?.toLocaleDateString() || 'Unknown date'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
-            applications.map((app) => (
-              <div key={app.id} className="application-card">
-                <p className="text-sm text-text-muted">Job ID: {app.jobId}</p>
-                <p className="text-sm text-text-muted">Status: {app.status}</p>
-                <p className="text-sm text-text-muted">Applied: {app.appliedAt?.toDate?.()?.toLocaleDateString()}</p>
-              </div>
-            ))
+            <p className="text-gray-600">No applications yet. Start applying to jobs!</p>
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
