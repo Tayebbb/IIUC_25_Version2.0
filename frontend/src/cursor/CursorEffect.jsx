@@ -22,14 +22,14 @@ const CursorEffect = () => {
       gsap.to(cursor, {
         x: x - 20,
         y: y - 20,
-        duration: 0.3,
+        duration: 0.15, // Faster transition (was 0.3)
         ease: "power2.out"
       });
 
       gsap.to(cursorDot, {
         x: x - 4,
         y: y - 4,
-        duration: 0.1,
+        duration: 0.05, // Much faster transition (was 0.1)
         ease: "power2.out"
       });
     };
@@ -57,12 +57,12 @@ const CursorEffect = () => {
       setIsClicking(true);
       gsap.to(cursor, {
         scale: 0.8,
-        duration: 0.1,
+        duration: 0.05, // Faster click animation (was 0.1)
         ease: "power2.out"
       });
       gsap.to(cursorDot, {
         scale: 1.5,
-        duration: 0.1,
+        duration: 0.05, // Faster click animation (was 0.1)
         ease: "power2.out"
       });
     };
@@ -72,12 +72,12 @@ const CursorEffect = () => {
       setIsClicking(false);
       gsap.to(cursor, {
         scale: isHovering ? 1.5 : 1,
-        duration: 0.2,
+        duration: 0.1, // Faster release animation (was 0.2)
         ease: "power2.out"
       });
       gsap.to(cursorDot, {
         scale: 1,
-        duration: 0.2,
+        duration: 0.1, // Faster release animation (was 0.2)
         ease: "power2.out"
       });
     };
@@ -87,12 +87,12 @@ const CursorEffect = () => {
       setIsHovering(true);
       gsap.to(cursor, {
         scale: 1.8,
-        duration: 0.3,
+        duration: 0.15, // Faster hover animation (was 0.3)
         ease: "power2.out"
       });
       gsap.to(cursorDot, {
         scale: 0.5,
-        duration: 0.3,
+        duration: 0.15, // Faster hover animation (was 0.3)
         ease: "power2.out"
       });
     };
@@ -101,12 +101,12 @@ const CursorEffect = () => {
       setIsHovering(false);
       gsap.to(cursor, {
         scale: 1,
-        duration: 0.3,
+        duration: 0.15, // Faster hover animation (was 0.3)
         ease: "power2.out"
       });
       gsap.to(cursorDot, {
         scale: 1,
-        duration: 0.3,
+        duration: 0.15, // Faster hover animation (was 0.3)
         ease: "power2.out"
       });
     };

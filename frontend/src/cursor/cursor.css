@@ -3,85 +3,52 @@
   cursor: none !important;
 }
 
-/* Main cursor ring */
+/* Main cursor ring - HIDDEN */
 .custom-cursor {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 40px;
-  height: 40px;
-  border: 2px solid rgba(16, 185, 129, 0.4);
-  border-radius: 50%;
-  background: rgba(16, 185, 129, 0.1);
-  backdrop-filter: blur(4px);
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0;
-  transform-origin: center;
-  mix-blend-mode: multiply;
-  box-shadow: 
-    0 0 20px rgba(16, 185, 129, 0.3),
-    inset 0 0 20px rgba(16, 185, 129, 0.1);
-  transition: 
-    border-color 0.3s ease,
-    background-color 0.3s ease,
-    box-shadow 0.3s ease;
+  display: none;
 }
 
-/* Cursor dot */
+/* Cursor dot - VISIBLE ONLY */
 .custom-cursor-dot {
   position: fixed;
   top: 0;
   left: 0;
-  width: 8px;
-  height: 8px;
-  background: linear-gradient(135deg, #10b981, #059669);
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #A855F7, #7C3AED);
   border-radius: 50%;
   pointer-events: none;
   z-index: 10000;
   opacity: 0;
   transform-origin: center;
   box-shadow: 
-    0 0 15px rgba(16, 185, 129, 0.6),
-    0 0 30px rgba(16, 185, 129, 0.4);
+    0 0 15px rgba(168, 85, 247, 0.6),
+    0 0 30px rgba(168, 85, 247, 0.4);
+  transition: all 0.15s ease; /* Faster CSS transition (was 0.3s) */
 }
 
-/* Hovering state */
-.custom-cursor.hovering {
-  border-color: rgba(16, 185, 129, 0.8);
-  background: rgba(16, 185, 129, 0.2);
-  box-shadow: 
-    0 0 30px rgba(16, 185, 129, 0.5),
-    0 0 60px rgba(16, 185, 129, 0.3),
-    inset 0 0 30px rgba(16, 185, 129, 0.2);
-}
-
+/* Hovering state for dot only */
 .custom-cursor-dot.hovering {
-  background: linear-gradient(135deg, #34d399, #10b981);
+  transform: scale(1.5);
+  background: linear-gradient(135deg, #D500F9, #A855F7);
   box-shadow: 
-    0 0 20px rgba(16, 185, 129, 0.8),
-    0 0 40px rgba(16, 185, 129, 0.6);
+    0 0 20px rgba(168, 85, 247, 0.8),
+    0 0 40px rgba(168, 85, 247, 0.6);
 }
 
-/* Clicking state */
-.custom-cursor.clicking {
-  border-color: rgba(16, 185, 129, 1);
-  background: rgba(16, 185, 129, 0.3);
-}
-
+/* Clicking state for dot only */
 .custom-cursor-dot.clicking {
-  background: linear-gradient(135deg, #059669, #047857);
+  transform: scale(0.8);
+  background: linear-gradient(135deg, #7C3AED, #6D28D9);
 }
 
 /* Smooth transitions */
-.custom-cursor,
 .custom-cursor-dot {
   will-change: transform, opacity;
 }
 
 /* Responsive behavior */
 @media (max-width: 768px) {
-  .custom-cursor,
   .custom-cursor-dot {
     display: none;
   }
@@ -105,17 +72,23 @@
 button.cursor-hover:hover,
 .btn-primary.cursor-hover:hover,
 .btn-secondary.cursor-hover:hover {
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 25px rgba(168, 85, 247, 0.3);
 }
 
 /* Link specific hover enhancement */
 a.cursor-hover:hover {
-  text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
 }
 
 /* Card specific hover enhancement */
 .card.cursor-hover:hover,
 .job-card.cursor-hover:hover {
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
-  border-color: rgba(16, 185, 129, 0.3);
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+/* Performance Optimizations */
+.custom-cursor-dot {
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
 }
