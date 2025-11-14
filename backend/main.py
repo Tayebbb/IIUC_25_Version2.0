@@ -22,6 +22,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:5174",
         "http://localhost:5175",
+        "http://localhost:5176",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
@@ -127,13 +128,19 @@ async def summarize_cv(file: UploadFile = File(...)):
         
         # Call Gemini to analyze the CV
         prompt = (
-            "You are an expert CV analyzer. Extract and list ONLY the following from this CV:\n\n"
-            "1. **Key Skills**: List all technical and soft skills mentioned\n"
-            "2. **Tools & Technologies**: List all programming languages, frameworks, software, platforms, and tools\n"
-            "3. **Relevant Roles**: List job titles and positions held\n"
-            "4. **Domains**: List industry domains and areas of expertise (e.g., Web Development, Data Science, Healthcare, Finance, etc.)\n\n"
-            "Format the output in a clear, structured manner with bullet points.\n"
-            "Be concise and extract only what is explicitly mentioned in the CV.\n\n"
+            "You are an expert CV analyzer. Extract and list ONLY the following from this CV in a structured JSON format:\n\n"
+            "Return ONLY a valid JSON object with these exact keys:\n"
+            "{\n"
+            '  "keySkills": ["skill1", "skill2", ...],\n'
+            '  "toolsTechnologies": ["tool1", "tool2", ...],\n'
+            '  "rolesAndDomains": ["role/domain1", "role/domain2", ...]\n'
+            "}\n\n"
+            "Instructions:\n"
+            "- keySkills: List all technical and soft skills (e.g., Python, Communication, Problem Solving)\n"
+            "- toolsTechnologies: List all programming languages, frameworks, software, platforms (e.g., React, Docker, AWS)\n"
+            "- rolesAndDomains: List job titles AND industry domains (e.g., Software Engineer, Web Development, Healthcare)\n"
+            "- Extract only what is explicitly mentioned in the CV\n"
+            "- Return ONLY the JSON object, no additional text\n\n"
             "CV Content:\n\n" + full_text
         )
         
@@ -152,10 +159,30 @@ async def summarize_cv(file: UploadFile = File(...)):
         if not summary:
             summary = "Unable to generate summary. Please try again."
         
-        return {
-            "summary": summary,
-            "raw_text": full_text
-        }
+        # Try to parse as JSON, if it fails return as text
+        import json
+        try:
+            # Clean markdown code blocks if present
+            cleaned_summary = summary.strip()
+            if cleaned_summary.startswith("```json"):
+                cleaned_summary = cleaned_summary[7:]
+            if cleaned_summary.startswith("```"):
+                cleaned_summary = cleaned_summary[3:]
+            if cleaned_summary.endswith("```"):
+                cleaned_summary = cleaned_summary[:-3]
+            cleaned_summary = cleaned_summary.strip()
+            
+            parsed_data = json.loads(cleaned_summary)
+            return {
+                "data": parsed_data,
+                "raw_text": full_text
+            }
+        except json.JSONDecodeError:
+            # If JSON parsing fails, return as text
+            return {
+                "data": {"summary": summary},
+                "raw_text": full_text
+            }
     
     except HTTPException:
         raise

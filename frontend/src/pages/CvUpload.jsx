@@ -1,14 +1,20 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Upload, FileText, Sparkles, CheckCircle, AlertCircle, Loader } from "lucide-react";
+import { Upload, FileText, Sparkles, CheckCircle, AlertCircle, Loader, Save } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { doc, updateDoc, getDoc, arrayUnion } from "firebase/firestore";
+import { db } from "../firebase";
+import toast from "react-hot-toast";
 
 export default function CvUpload() {
+  const { currentUser } = useAuth();
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [summary, setSummary] = useState("");
+  const [cvData, setCvData] = useState(null);
   const [rawText, setRawText] = useState("");
   const [error, setError] = useState("");
   const [showRawText, setShowRawText] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -19,7 +25,7 @@ export default function CvUpload() {
       } else {
         setSelectedFile(file);
         setError("");
-        setSummary("");
+        setCvData(null);
         setRawText("");
       }
     }
@@ -33,7 +39,7 @@ export default function CvUpload() {
 
     setLoading(true);
     setError("");
-    setSummary("");
+    setCvData(null);
     setRawText("");
 
     try {
@@ -51,13 +57,50 @@ export default function CvUpload() {
       }
 
       const data = await res.json();
-      setSummary(data.summary);
+      setCvData(data.data);
       setRawText(data.raw_text);
     } catch (err) {
       console.error("Error:", err);
       setError(err.message || "Failed to process CV. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveToProfile = async () => {
+    if (!currentUser || !cvData) {
+      toast.error("No data to save");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const userDocRef = doc(db, "users", currentUser.uid);
+      
+      // Get current user data
+      const userDoc = await getDoc(userDocRef);
+      const currentSkills = userDoc.exists() ? (userDoc.data().skills || []) : [];
+      
+      // Combine all extracted skills (remove duplicates)
+      const allSkills = [...new Set([
+        ...currentSkills,
+        ...(cvData.keySkills || []),
+        ...(cvData.toolsTechnologies || [])
+      ])];
+
+      // Update user profile
+      await updateDoc(userDocRef, {
+        skills: allSkills,
+        cvAnalyzed: true,
+        lastCvUpdate: new Date().toISOString()
+      });
+
+      toast.success("Skills added to your profile!");
+    } catch (err) {
+      console.error("Error saving to profile:", err);
+      toast.error("Failed to save to profile. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -153,25 +196,147 @@ export default function CvUpload() {
         </motion.div>
       )}
 
-      {/* Summary Section */}
-      {summary && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={styles.summaryCard}
-        >
-          <div style={styles.summaryHeader}>
-            <Sparkles size={24} style={{ color: '#10B981' }} />
-            <h2 style={styles.summaryTitle}>CV Analysis</h2>
-          </div>
-          <div style={styles.summaryContent}>
-            {summary.split('\n').map((line, idx) => (
-              <p key={idx} style={styles.summaryText}>
-                {line}
-              </p>
-            ))}
-          </div>
-        </motion.div>
+      {/* CV Analysis Results */}
+      {cvData && (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={styles.resultsCard}
+          >
+            <div style={styles.resultsHeader}>
+              <div style={styles.resultsHeaderContent}>
+                <Sparkles size={28} style={{ color: '#10B981' }} />
+                <h2 style={styles.resultsTitle}>CV Analysis Results</h2>
+              </div>
+            </div>
+
+            <div style={styles.sectionsContainer}>
+              {/* Key Skills Section */}
+              {cvData.keySkills && cvData.keySkills.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  style={styles.analysisSection}
+                >
+                  <div style={styles.sectionHeader}>
+                    <div style={{...styles.sectionIcon, background: 'linear-gradient(135deg, #10B981, #059669)'}}>
+                      <CheckCircle size={20} style={{ color: '#FFFFFF' }} />
+                    </div>
+                    <h3 style={styles.sectionTitle}>Key Skills</h3>
+                    <span style={styles.badge}>{cvData.keySkills.length}</span>
+                  </div>
+                  <div style={styles.tagGrid}>
+                    {cvData.keySkills.map((skill, idx) => (
+                      <motion.span 
+                        key={idx} 
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 + idx * 0.05 }}
+                        style={styles.skillTag}
+                      >
+                        {skill}
+                      </motion.span>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Tools & Technologies Section */}
+              {cvData.toolsTechnologies && cvData.toolsTechnologies.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  style={styles.analysisSection}
+                >
+                  <div style={styles.sectionHeader}>
+                    <div style={{...styles.sectionIcon, background: 'linear-gradient(135deg, #3B82F6, #2563EB)'}}>
+                      <FileText size={20} style={{ color: '#FFFFFF' }} />
+                    </div>
+                    <h3 style={styles.sectionTitle}>Tools & Technologies</h3>
+                    <span style={{...styles.badge, background: 'rgba(59,130,246,0.15)', color: '#3B82F6'}}>
+                      {cvData.toolsTechnologies.length}
+                    </span>
+                  </div>
+                  <div style={styles.tagGrid}>
+                    {cvData.toolsTechnologies.map((tool, idx) => (
+                      <motion.span 
+                        key={idx}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.2 + idx * 0.05 }}
+                        style={styles.techTag}
+                      >
+                        {tool}
+                      </motion.span>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Roles & Domains Section */}
+              {cvData.rolesAndDomains && cvData.rolesAndDomains.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  style={styles.analysisSection}
+                >
+                  <div style={styles.sectionHeader}>
+                    <div style={{...styles.sectionIcon, background: 'linear-gradient(135deg, #A855F7, #7C3AED)'}}>
+                      <Sparkles size={20} style={{ color: '#FFFFFF' }} />
+                    </div>
+                    <h3 style={styles.sectionTitle}>Relevant Roles & Domains</h3>
+                    <span style={{...styles.badge, background: 'rgba(168,85,247,0.15)', color: '#A855F7'}}>
+                      {cvData.rolesAndDomains.length}
+                    </span>
+                  </div>
+                  <div style={styles.tagGrid}>
+                    {cvData.rolesAndDomains.map((role, idx) => (
+                      <motion.span 
+                        key={idx}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 + idx * 0.05 }}
+                        style={styles.roleTag}
+                      >
+                        {role}
+                      </motion.span>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Save to Profile Button */}
+            <motion.button
+              whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(168,85,247,0.4)' }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSaveToProfile}
+              disabled={saving}
+              style={{
+                ...styles.saveButton,
+                ...(saving && styles.saveButtonDisabled),
+              }}
+            >
+              <div style={styles.saveButtonContent}>
+                {saving ? (
+                  <>
+                    <Loader size={22} style={styles.spinner} />
+                    <span>Saving to Profile...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={22} />
+                    <span>Add Skills to Profile</span>
+                  </>
+                )}
+              </div>
+            </motion.button>
+          </motion.div>
+        </>
       )}
 
       {/* Raw Text Section (Collapsible) */}
@@ -207,76 +372,80 @@ export default function CvUpload() {
 
 const styles = {
   container: {
-    minHeight: "100vh",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    padding: "2rem",
+    maxWidth: "900px",
+    margin: "0 auto",
+    padding: "24px",
+    fontFamily: "Poppins, Inter, system-ui, sans-serif",
+    minHeight: "calc(100vh - 80px)",
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
+    gap: "20px",
   },
   header: {
     display: "flex",
     alignItems: "center",
-    gap: "1rem",
-    marginBottom: "2rem",
-    background: "white",
-    padding: "1.5rem 2rem",
-    borderRadius: "1rem",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-    maxWidth: "900px",
-    width: "100%",
+    gap: "16px",
+    padding: "20px 24px",
+    background: "rgba(17,21,43,0.6)",
+    borderRadius: "16px",
+    border: "1px solid rgba(168,85,247,0.12)",
+    boxShadow: "0 4px 20px rgba(10,8,30,0.4)",
   },
   headerIcon: {
     width: "48px",
     height: "48px",
-    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
     borderRadius: "12px",
+    background: "linear-gradient(135deg, #10B981, #059669)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    boxShadow: "0 0 20px rgba(16,185,129,0.3)",
   },
   title: {
-    fontSize: "1.875rem",
-    fontWeight: "700",
-    color: "#1F2937",
+    color: "#FFFFFF",
     margin: 0,
+    fontSize: "24px",
+    fontWeight: "700",
+    background: "linear-gradient(90deg, #10B981, #34D399)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
   },
   subtitle: {
-    fontSize: "1rem",
-    color: "#6B7280",
+    color: "#94A3B8",
     margin: 0,
+    fontSize: "14px",
   },
   uploadCard: {
-    background: "white",
+    background: "rgba(17,21,43,0.6)",
     padding: "2.5rem",
-    borderRadius: "1rem",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-    maxWidth: "900px",
-    width: "100%",
+    borderRadius: "16px",
+    border: "1px solid rgba(168,85,247,0.12)",
+    boxShadow: "0 4px 20px rgba(10,8,30,0.4)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    marginBottom: "1.5rem",
   },
   uploadIcon: {
     width: "80px",
     height: "80px",
-    background: "linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)",
+    background: "linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.2))",
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: "1.5rem",
+    border: "2px solid rgba(16,185,129,0.2)",
   },
   uploadTitle: {
     fontSize: "1.5rem",
     fontWeight: "600",
-    color: "#1F2937",
+    color: "#FFFFFF",
     marginBottom: "0.5rem",
   },
   uploadDescription: {
     fontSize: "1rem",
-    color: "#6B7280",
+    color: "#94A3B8",
     textAlign: "center",
     marginBottom: "2rem",
     maxWidth: "500px",
@@ -296,10 +465,10 @@ const styles = {
     justifyContent: "center",
     gap: "0.75rem",
     padding: "1rem 1.5rem",
-    background: "#F3F4F6",
-    border: "2px dashed #D1D5DB",
+    background: "rgba(30,41,59,0.5)",
+    border: "2px dashed rgba(148,163,184,0.3)",
     borderRadius: "0.5rem",
-    color: "#4B5563",
+    color: "#94A3B8",
     fontSize: "1rem",
     fontWeight: "500",
     transition: "all 0.3s ease",
@@ -309,9 +478,10 @@ const styles = {
     alignItems: "center",
     gap: "0.5rem",
     padding: "0.75rem 1rem",
-    background: "#D1FAE5",
+    background: "rgba(16,185,129,0.1)",
     borderRadius: "0.5rem",
-    color: "#065F46",
+    border: "1px solid rgba(16,185,129,0.2)",
+    color: "#10B981",
     fontSize: "0.875rem",
     marginBottom: "1rem",
   },
@@ -320,7 +490,7 @@ const styles = {
     alignItems: "center",
     gap: "0.5rem",
     padding: "1rem 2rem",
-    background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+    background: "linear-gradient(135deg, #10B981, #059669)",
     color: "white",
     border: "none",
     borderRadius: "0.5rem",
@@ -328,7 +498,7 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
     transition: "transform 0.2s ease, box-shadow 0.2s ease",
-    boxShadow: "0 4px 6px rgba(16, 185, 129, 0.3)",
+    boxShadow: "0 4px 12px rgba(16,185,129,0.3)",
   },
   uploadButtonDisabled: {
     opacity: 0.5,
@@ -343,22 +513,159 @@ const styles = {
     alignItems: "center",
     gap: "0.75rem",
     padding: "1rem 1.5rem",
-    background: "#FEE2E2",
+    background: "rgba(239,68,68,0.1)",
     borderRadius: "0.5rem",
-    color: "#991B1B",
-    maxWidth: "900px",
-    width: "100%",
-    marginBottom: "1.5rem",
-    boxShadow: "0 2px 4px rgba(239, 68, 68, 0.2)",
+    border: "1px solid rgba(239,68,68,0.2)",
+    color: "#EF4444",
+    boxShadow: "0 2px 8px rgba(239,68,68,0.1)",
+  },
+  resultsCard: {
+    background: "rgba(17,21,43,0.6)",
+    borderRadius: "16px",
+    border: "1px solid rgba(168,85,247,0.12)",
+    boxShadow: "0 4px 20px rgba(10,8,30,0.4)",
+    overflow: "hidden",
+  },
+  resultsHeader: {
+    padding: "2rem",
+    background: "linear-gradient(135deg, rgba(16,185,129,0.05), rgba(168,85,247,0.05))",
+    borderBottom: "1px solid rgba(148,163,184,0.1)",
+  },
+  resultsHeaderContent: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+  },
+  resultsTitle: {
+    fontSize: "1.75rem",
+    fontWeight: "700",
+    color: "#FFFFFF",
+    margin: 0,
+    background: "linear-gradient(90deg, #10B981, #A855F7)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+  },
+  sectionsContainer: {
+    padding: "2rem",
+    display: "flex",
+    flexDirection: "column",
+    gap: "2rem",
+  },
+  analysisSection: {
+    background: "rgba(30,41,59,0.3)",
+    borderRadius: "12px",
+    padding: "1.5rem",
+    border: "1px solid rgba(148,163,184,0.08)",
+  },
+  sectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.75rem",
+    marginBottom: "1.25rem",
+  },
+  sectionIcon: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+  },
+  sectionTitle: {
+    fontSize: "1.25rem",
+    fontWeight: "600",
+    color: "#FFFFFF",
+    margin: 0,
+    flex: 1,
+  },
+  badge: {
+    padding: "0.25rem 0.75rem",
+    background: "rgba(16,185,129,0.15)",
+    borderRadius: "12px",
+    fontSize: "0.875rem",
+    fontWeight: "600",
+    color: "#10B981",
+  },
+  tagGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+    gap: "0.75rem",
+  },
+  skillTag: {
+    padding: "0.75rem 1rem",
+    background: "rgba(16,185,129,0.08)",
+    border: "1px solid rgba(16,185,129,0.25)",
+    borderRadius: "8px",
+    color: "#10B981",
+    fontSize: "0.9rem",
+    fontWeight: "500",
+    textAlign: "center",
+    transition: "all 0.2s ease",
+    cursor: "default",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  techTag: {
+    padding: "0.75rem 1rem",
+    background: "rgba(59,130,246,0.08)",
+    border: "1px solid rgba(59,130,246,0.25)",
+    borderRadius: "8px",
+    color: "#3B82F6",
+    fontSize: "0.9rem",
+    fontWeight: "500",
+    textAlign: "center",
+    transition: "all 0.2s ease",
+    cursor: "default",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  roleTag: {
+    padding: "0.75rem 1rem",
+    background: "rgba(168,85,247,0.08)",
+    border: "1px solid rgba(168,85,247,0.25)",
+    borderRadius: "8px",
+    color: "#A855F7",
+    fontSize: "0.9rem",
+    fontWeight: "500",
+    textAlign: "center",
+    transition: "all 0.2s ease",
+    cursor: "default",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+  },
+  saveButton: {
+    margin: "0 2rem 2rem 2rem",
+    padding: "1.25rem 2rem",
+    background: "linear-gradient(135deg, #A855F7, #7C3AED)",
+    color: "white",
+    border: "none",
+    borderRadius: "12px",
+    fontSize: "1.125rem",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    boxShadow: "0 4px 16px rgba(168,85,247,0.3)",
+    position: "relative",
+    overflow: "hidden",
+  },
+  saveButtonContent: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "0.75rem",
+    position: "relative",
+    zIndex: 1,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+    transform: "none !important",
   },
   summaryCard: {
-    background: "white",
+    background: "rgba(17,21,43,0.6)",
     padding: "2rem",
-    borderRadius: "1rem",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-    maxWidth: "900px",
-    width: "100%",
-    marginBottom: "1.5rem",
+    borderRadius: "16px",
+    border: "1px solid rgba(168,85,247,0.12)",
+    boxShadow: "0 4px 20px rgba(10,8,30,0.4)",
   },
   summaryHeader: {
     display: "flex",
@@ -366,59 +673,50 @@ const styles = {
     gap: "0.75rem",
     marginBottom: "1.5rem",
     paddingBottom: "1rem",
-    borderBottom: "2px solid #E5E7EB",
+    borderBottom: "1px solid rgba(148,163,184,0.1)",
   },
   summaryTitle: {
     fontSize: "1.5rem",
     fontWeight: "600",
-    color: "#1F2937",
+    color: "#FFFFFF",
     margin: 0,
   },
-  summaryContent: {
-    lineHeight: "1.8",
-  },
-  summaryText: {
-    color: "#374151",
-    fontSize: "1rem",
-    marginBottom: "0.75rem",
-    whiteSpace: "pre-wrap",
-  },
   rawTextCard: {
-    background: "white",
+    background: "rgba(17,21,43,0.6)",
     padding: "1.5rem",
-    borderRadius: "1rem",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-    maxWidth: "900px",
-    width: "100%",
+    borderRadius: "16px",
+    border: "1px solid rgba(168,85,247,0.12)",
+    boxShadow: "0 4px 20px rgba(10,8,30,0.4)",
   },
   rawTextToggle: {
     display: "flex",
     alignItems: "center",
     gap: "0.5rem",
     padding: "0.75rem 1rem",
-    background: "#F3F4F6",
-    border: "none",
+    background: "rgba(30,41,59,0.5)",
+    border: "1px solid rgba(148,163,184,0.1)",
     borderRadius: "0.5rem",
-    color: "#4B5563",
+    color: "#94A3B8",
     fontSize: "0.875rem",
     fontWeight: "500",
     cursor: "pointer",
     width: "100%",
-    transition: "background 0.2s ease",
+    transition: "all 0.2s ease",
   },
   rawTextContent: {
     marginTop: "1rem",
     maxHeight: "400px",
     overflow: "auto",
-    background: "#F9FAFB",
+    background: "rgba(15,23,42,0.5)",
     borderRadius: "0.5rem",
     padding: "1rem",
+    border: "1px solid rgba(148,163,184,0.1)",
   },
   rawTextPre: {
     margin: 0,
     fontSize: "0.875rem",
     lineHeight: "1.6",
-    color: "#374151",
+    color: "#CBD5E1",
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
     fontFamily: "monospace",
