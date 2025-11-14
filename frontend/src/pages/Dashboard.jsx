@@ -63,23 +63,6 @@ const Dashboard = () => {
     }
   }, [calculateCompletion]);
 
-  // Monitor authentication state
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      if (user) {
-        loadUserProfile(user.uid);
-        fetchEnrolledCourses(user.email);
-        fetchRecommendedCourses(user.email);
-        fetchSkillGapResources(user.uid);
-        fetchAppliedJobs(user.email);
-      } else {
-        setLoading(false);
-      }
-    });
-    return () => unsubscribe();
-  }, [loadUserProfile, fetchEnrolledCourses, fetchRecommendedCourses, fetchSkillGapResources, fetchAppliedJobs]);
-
   // Fetch courses where user is enrolled
   const fetchEnrolledCourses = useCallback(async (userEmail) => {
     try {
@@ -313,6 +296,23 @@ const Dashboard = () => {
       console.error('Error fetching applied jobs:', error);
     }
   }, []);
+
+  // Monitor authentication state - placed after all useCallback definitions
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (user) {
+        loadUserProfile(user.uid);
+        fetchEnrolledCourses(user.email);
+        fetchRecommendedCourses(user.email);
+        fetchSkillGapResources(user.uid);
+        fetchAppliedJobs(user.email);
+      } else {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, [loadUserProfile, fetchEnrolledCourses, fetchRecommendedCourses, fetchSkillGapResources, fetchAppliedJobs]);
 
   return (
     <div className="min-h-screen bg-base">
