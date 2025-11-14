@@ -13,6 +13,7 @@ import { CursorEffect } from './cursor';
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminProtectedRoute from "./components/AdminProtectedRoute";
 
 // Pages
 import Home from "./pages/Home";
@@ -28,6 +29,7 @@ import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import ChatBot from "./pages/ChatBot";
 import AdminPanel from "./pages/AdminPanel";
+import AdminLogin from "./pages/AdminLogin";
 
 function AppContent() {
   const location = useLocation();
@@ -54,7 +56,8 @@ function AppContent() {
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/chatbot" element={<ProtectedRoute><ChatBot /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+            <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminProtectedRoute><AdminPanel /></AdminProtectedRoute>} />
           </Routes>
         </AnimatePresence>
       </div>
