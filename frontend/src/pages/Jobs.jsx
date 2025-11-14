@@ -390,7 +390,8 @@ const Jobs = () => {
                           <div className={`ml-2 px-3 py-1 rounded-lg text-sm font-bold ${
                             job.matchScore >= 80 ? 'bg-green-500/30 text-green-200' :
                             job.matchScore >= 60 ? 'bg-blue-500/30 text-blue-200' :
-                            'bg-yellow-500/30 text-yellow-200'
+                            job.matchScore >= 40 ? 'bg-yellow-500/30 text-yellow-200' :
+                            'bg-gray-500/30 text-gray-200'
                           }`}>
                             {job.matchScore}%
                           </div>

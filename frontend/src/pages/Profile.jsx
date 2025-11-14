@@ -13,6 +13,7 @@ import { db } from '../firebase';
 import toast from 'react-hot-toast';
 import { CAREER_TRACKS, EXPERIENCE_LEVELS, LOCATIONS } from '../constants/jobConstants';
 import { searchSkills, SKILL_CATEGORIES, getSkillsByCategory } from '../constants/skillsDictionary';
+import ProfilePDFDownload from '../components/ProfilePDFDownload';
 
 const Profile = () => {
   const { currentUser } = useAuth();
@@ -539,6 +540,15 @@ const Profile = () => {
           ) : (
             <p className="text-muted">No applications yet. Start applying to jobs!</p>
           )}
+        </div>
+
+        {/* Export / Download Section */}
+        <div className="mt-10 p-6 rounded-2xl bg-[#11121A] border border-[#1F2030]">
+          <h3 className="text-lg font-semibold text-white">Export / Download</h3>
+          <p className="text-sm text-gray-400 mt-1">
+            Download your profile information as a PDF.
+          </p>
+          <ProfilePDFDownload profile={profile} />
         </div>
       </div>
     </motion.div>
