@@ -22,7 +22,6 @@ import Resources from "./pages/Resources";
 import LearningResources from "./pages/LearningResources";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
