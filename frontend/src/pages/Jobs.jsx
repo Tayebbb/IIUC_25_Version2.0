@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { calculateMatchScore, getMatchLevel } from '../utils/matchScore';
 import { getLearningSuggestions } from '../utils/getLearningSuggestions';
 import SkillGapCard from '../components/SkillGapCard';
 import LearningSuggestionCard from '../components/LearningSuggestionCard';
+import toast from 'react-hot-toast';
 import { 
   Briefcase, 
   MapPin, 
@@ -308,9 +309,23 @@ const JobCard = ({ job, index, learningResources, currentUser }) => {
     const checkApplication = async () => {
       if (currentUser) {
         try {
-          const userApplications = await applicationsService.getUserApplications(currentUser.uid);
-          const applied = userApplications.some(app => app.jobId === job.id);
-          setHasApplied(applied);
+          const jobRef = doc(db, 'jobs', job.id);
+          const jobDoc = await getDoc(jobRef);
+          
+          if (jobDoc.exists()) {
+            const jobData = jobDoc.data();
+            // Check if current user's email is in any Applicant field
+            let hasAppliedToJob = false;
+            for (let i = 1; i <= 100; i++) { // Check up to 100 applicants
+              if (jobData[`Applicant_${i}`] === currentUser.email) {
+                hasAppliedToJob = true;
+                break;
+              } else if (!jobData[`Applicant_${i}`]) {
+                break; // No more applicants
+              }
+            }
+            setHasApplied(hasAppliedToJob);
+          }
         } catch (error) {
           console.error('Error checking application:', error);
         }
@@ -334,13 +349,39 @@ const JobCard = ({ job, index, learningResources, currentUser }) => {
     try {
       setApplying(true);
       
-      await applicationsService.create({
-        userId: currentUser.uid,
-        jobId: job.id,
-        jobTitle: job.title,
-        company: job.company,
-        matchScore: job.matchScore
-      });
+      // Get the job document to find the next applicant number
+      const jobRef = doc(db, 'jobs', job.id);
+      const jobDoc = await getDoc(jobRef);
+      
+      if (!jobDoc.exists()) {
+        toast.error('Job not found');
+        return;
+      }
+      
+      // Find the next applicant field number
+      let applicantNumber = 1;
+      const jobData = jobDoc.data();
+      
+      // Count existing applicants
+      while (jobData[`Applicant_${applicantNumber}`]) {
+        applicantNumber++;
+      }
+      
+      // Check if user hasn't already applied
+      for (let i = 1; i < applicantNumber; i++) {
+        if (jobData[`Applicant_${i}`] === currentUser.email) {
+          setHasApplied(true);
+          toast.info('You have already applied to this job');
+          setApplying(false);
+          return;
+        }
+      }
+      
+      // Add the current user's email as the next applicant
+      const updateData = {};
+      updateData[`Applicant_${applicantNumber}`] = currentUser.email;
+      
+      await updateDoc(jobRef, updateData);
       
       setHasApplied(true);
       toast.success(`Application submitted for ${job.title}!`);

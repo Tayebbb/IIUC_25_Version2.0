@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Briefcase, BookOpen, TrendingUp, ArrowRight, GraduationCap, CheckCircle, Sparkles } from 'lucide-react';
+import { User, Briefcase, BookOpen, TrendingUp, ArrowRight, GraduationCap, CheckCircle, Sparkles, MapPin, Award } from 'lucide-react';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../firebase';
@@ -11,6 +11,7 @@ const Dashboard = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [recommendedCourses, setRecommendedCourses] = useState([]);
+  const [appliedJobs, setAppliedJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [recommendations] = useState({ jobs: [], resources: [] });
   const [profileCompletion, setProfileCompletion] = useState(0);
@@ -26,6 +27,7 @@ const Dashboard = () => {
         fetchEnrolledCourses(user.email);
         fetchRecommendedCourses(user.email);
         fetchSkillGapResources(user.uid);
+        fetchAppliedJobs(user.email);
       } else {
         setLoading(false);
       }
@@ -275,6 +277,42 @@ const Dashboard = () => {
     }
   };
 
+  // Fetch jobs that user has applied to
+  const fetchAppliedJobs = async (userEmail) => {
+    try {
+      const jobsRef = collection(db, 'jobs');
+      const snapshot = await getDocs(jobsRef);
+
+      const userAppliedJobs = [];
+
+      snapshot.forEach((doc) => {
+        const jobData = doc.data();
+        let hasApplied = false;
+
+        // Check all Applicant fields for user's email
+        for (let i = 1; i <= 100; i++) {
+          if (jobData[`Applicant_${i}`] === userEmail) {
+            hasApplied = true;
+            break;
+          } else if (!jobData[`Applicant_${i}`]) {
+            break; // No more applicants
+          }
+        }
+
+        if (hasApplied) {
+          userAppliedJobs.push({
+            id: doc.id,
+            ...jobData
+          });
+        }
+      });
+
+      setAppliedJobs(userAppliedJobs);
+    } catch (error) {
+      console.error('Error fetching applied jobs:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-base">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -386,23 +424,66 @@ const Dashboard = () => {
           )}
         </section>
 
-        {/* Recommended Jobs */}
+        {/* Your Job Applications */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <Briefcase className="text-primary glow-icon" size={28} />
-              <h2 className="text-2xl font-bold glow-text">Recommended Jobs for You</h2>
+              <h2 className="text-2xl font-bold glow-text">Your Job Applications</h2>
             </div>
-            <button className="text-primary hover:text-primary-light flex items-center gap-2 font-medium transition-colors">
-              <span>View All</span>
+            <a href="/jobs" className="text-primary hover:text-primary-light flex items-center gap-2 font-medium transition-colors">
+              <span>Browse More Jobs</span>
               <ArrowRight size={18} />
-            </button>
+            </a>
           </div>
 
-          {recommendations.jobs.length > 0 ? (
+          {appliedJobs.length > 0 ? (
             <div className="grid md:grid-cols-2 gap-6">
-              {recommendations.jobs.slice(0, 4).map((job) => (
-                <JobCard key={job._id} job={job} />
+              {appliedJobs.map((job, index) => (
+                <motion.div
+                  key={job.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="neon-card p-6 hover:border-primary/60 transition-all duration-300"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-main mb-1">{job.title}</h3>
+                      <div className="flex flex-wrap gap-3 text-sm text-muted">
+                        <span className="flex items-center gap-1">
+                          <Briefcase size={14} />
+                          {job.company}
+                        </span>
+                        {job.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin size={14} />
+                            {job.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="px-3 py-1 bg-green-500/20 border border-green-500/40 rounded-full">
+                      <span className="text-xs text-green-400 flex items-center gap-1">
+                        <CheckCircle size={12} />
+                        Applied
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mb-4 pt-3 border-t border-[rgba(168,85,247,0.1)]">
+                    <p className="text-sm text-muted line-clamp-2 mb-3">{job.description}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted">
+                      <Award size={14} />
+                      <span>{job.experienceRequired}</span>
+                    </div>
+                  </div>
+
+                  <a href="/jobs" className="text-primary hover:text-primary-light text-sm font-medium flex items-center gap-1 transition-colors">
+                    View Details
+                    <ArrowRight size={14} />
+                  </a>
+                </motion.div>
               ))}
             </div>
           ) : (
@@ -412,9 +493,13 @@ const Dashboard = () => {
               className="neon-card p-12 text-center"
             >
               <Briefcase className="mx-auto text-muted mb-4" size={64} />
-              <p className="text-muted">
-                No job recommendations yet. <span className="text-primary hover:text-primary-light font-medium cursor-pointer">Update your skills</span> to get personalized matches!
+              <p className="text-muted mb-6">
+                You haven't applied to any jobs yet.
               </p>
+              <a href="/jobs" className="btn-primary inline-flex items-center gap-2">
+                <Briefcase size={20} />
+                Explore Jobs
+              </a>
             </motion.div>
           )}
         </section>
