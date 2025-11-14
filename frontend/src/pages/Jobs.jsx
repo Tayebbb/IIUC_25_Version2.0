@@ -45,7 +45,18 @@ const Jobs = () => {
       setLoading(true);
       setError('');
 
-      // Fetch all jobs first
+      // Fetch user profile
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (!userDoc.exists()) {
+        setError('User profile not found. Please complete your profile first.');
+        setLoading(false);
+        return;
+      }
+
+      const userData = userDoc.data();
+      setUserProfile(userData);
+
+      // Fetch all jobs
       const jobsSnapshot = await getDocs(collection(db, 'jobs'));
       const jobsData = jobsSnapshot.docs.map(doc => ({
         id: doc.id,
@@ -62,68 +73,23 @@ const Jobs = () => {
       }));
       setLearningResources(resourcesData);
 
-      // Try to fetch user profile
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setUserProfile(userData);
-
-        // Check if profile has required fields for matching
-        const hasRequiredFields = userData.skills?.length > 0 && 
-                                   userData.experienceLevel && 
-                                   userData.preferredTrack;
-
-        if (hasRequiredFields) {
-          // Calculate match scores for each job
-          const jobsWithScores = jobsData.map(job => {
-            const matchResult = calculateMatchScore(userData, job);
-            return {
-              ...job,
-              matchScore: matchResult.score,
-              matchDetails: matchResult
-            };
-          });
-
-          // Sort by match score (highest first)
-          const sortedJobs = jobsWithScores.sort((a, b) => b.matchScore - a.matchScore);
-          setMatchedJobs(sortedJobs);
-        } else {
-          // Profile incomplete - show jobs without matching scores (set default 50% match)
-          const jobsWithDefaultScores = jobsData.map(job => ({
-            ...job,
-            matchScore: 50,
-            matchDetails: {
-              score: 50,
-              matchedSkills: [],
-              missingSkills: job.skillsRequired || [],
-              experienceNote: 'Complete your profile for accurate matching',
-              trackNote: 'Complete your profile for accurate matching',
-              breakdown: { skillScore: 0, expScore: 0, trackScore: 0 }
-            }
-          }));
-          setMatchedJobs(jobsWithDefaultScores);
-        }
-      } else {
-        // No profile - show jobs without matching
-        const jobsWithDefaultScores = jobsData.map(job => ({
+      // Calculate match scores for each job
+      const jobsWithScores = jobsData.map(job => {
+        const matchResult = calculateMatchScore(userData, job);
+        return {
           ...job,
-          matchScore: 50,
-          matchDetails: {
-            score: 50,
-            matchedSkills: [],
-            missingSkills: job.skillsRequired || [],
-            experienceNote: 'Complete your profile for accurate matching',
-            trackNote: 'Complete your profile for accurate matching',
-            breakdown: { skillScore: 0, expScore: 0, trackScore: 0 }
-          }
-        }));
-        setMatchedJobs(jobsWithDefaultScores);
-      }
+          matchScore: matchResult.score,
+          matchDetails: matchResult
+        };
+      });
+
+      // Sort by match score (highest first)
+      const sortedJobs = jobsWithScores.sort((a, b) => b.matchScore - a.matchScore);
+      setMatchedJobs(sortedJobs);
 
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError('Failed to load jobs. Please try again.');
+      setError('Failed to load job matches. Please try again.');
     } finally {
       setLoading(false);
     }
