@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Briefcase, DollarSign, Building2, Clock, TrendingUp, X, ExternalLink } from 'lucide-react';
+import { Search, MapPin, Briefcase, DollarSign, Building2, Clock, TrendingUp, X, ExternalLink, Users, CheckCircle, AlertCircle } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -18,6 +19,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -25,38 +27,63 @@ const Jobs = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedJob, setSelectedJob] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [applying, setApplying] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  // Monitor authentication state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Fetch jobs from Firebase
   useEffect(() => {
-    const loadJobs = async () => {
-      try {
-        setLoading(true);
-        const jobsRef = collection(db, 'Jobs');
-        const snapshot = await getDocs(jobsRef);
-        
-        const jobsData = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          jobsData.push({
-            id: doc.id,
-            title: doc.id, // Document name is the job title
-            details: data['Job Details'] || data.JobDetails || 'No details available',
-            salary: data.Salary || 'Not specified',
-            company: data['Company Name'] || data.CompanyName || 'Company not specified',
-          });
-        });
-
-        setJobs(jobsData);
-        setFilteredJobs(jobsData);
-      } catch (error) {
-        console.error('Error loading jobs:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadJobs();
-  }, []);
+  }, [currentUser]);
+
+  const loadJobs = async () => {
+    try {
+      setLoading(true);
+      const jobsRef = collection(db, 'Jobs');
+      const snapshot = await getDocs(jobsRef);
+      
+      const jobsData = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        
+        // Count applicants
+        const applicantCount = Object.keys(data).filter(key => 
+          key.startsWith('Applicant_')
+        ).length;
+
+        // Check if current user has applied
+        const hasApplied = currentUser ? Object.keys(data).some(key => 
+          key.startsWith('Applicant_') && data[key] === currentUser.email
+        ) : false;
+
+        jobsData.push({
+          id: doc.id,
+          title: doc.id,
+          details: data['Job Details'] || data.JobDetails || 'No details available',
+          salary: data.Salary || 'Not specified',
+          company: data['Company Name'] || data.CompanyName || 'Company not specified',
+          applicantCount,
+          hasApplied
+        });
+      });
+
+      setJobs(jobsData);
+      setFilteredJobs(jobsData);
+    } catch (error) {
+      console.error('Error loading jobs:', error);
+      showNotification('Failed to load jobs', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle search
   useEffect(() => {
@@ -74,10 +101,74 @@ const Jobs = () => {
     setFilteredJobs(filtered);
   }, [searchTerm, jobs]);
 
+  // Show notification
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Handle job application
+  const handleApply = async (jobId, jobTitle) => {
+    if (!currentUser) {
+      showNotification('Please sign in to apply for jobs', 'error');
+      return;
+    }
+
+    try {
+      setApplying(true);
+      const jobRef = doc(db, 'Jobs', jobId);
+      const jobSnap = await getDoc(jobRef);
+      
+      if (!jobSnap.exists()) {
+        showNotification('Job not found', 'error');
+        return;
+      }
+
+      const jobData = jobSnap.data();
+      
+      // Check if already applied
+      const alreadyApplied = Object.keys(jobData).some(key => 
+        key.startsWith('Applicant_') && jobData[key] === currentUser.email
+      );
+
+      if (alreadyApplied) {
+        showNotification('You have already applied for this job', 'error');
+        return;
+      }
+
+      // Find next applicant number
+      const applicantNumbers = Object.keys(jobData)
+        .filter(key => key.startsWith('Applicant_'))
+        .map(key => parseInt(key.replace('Applicant_', '')))
+        .filter(num => !isNaN(num));
+
+      const nextNumber = applicantNumbers.length > 0 
+        ? Math.max(...applicantNumbers) + 1 
+        : 1;
+
+      // Add new applicant
+      await updateDoc(jobRef, {
+        [`Applicant_${nextNumber}`]: currentUser.email
+      });
+
+      showNotification(`Successfully applied for ${jobTitle}!`, 'success');
+      
+      // Reload jobs to update counts
+      await loadJobs();
+      
+      // Close modal if open
+      setSelectedJob(null);
+    } catch (error) {
+      console.error('Error applying:', error);
+      showNotification('Failed to apply. Please try again.', 'error');
+    } finally {
+      setApplying(false);
+    }
+  };
+
   // Format salary for display
   const formatSalary = (salary) => {
     if (!salary || salary === 'Not specified') return salary;
-    // Add thousand separators if it's a number
     const numericSalary = salary.toString().replace(/\D/g, '');
     if (numericSalary) {
       return `৳${parseInt(numericSalary).toLocaleString('en-BD')}`;
@@ -87,6 +178,31 @@ const Jobs = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Notification */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -50, x: '-50%' }}
+            className="fixed top-4 left-1/2 z-50 max-w-md"
+          >
+            <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl ${
+              notification.type === 'success' 
+                ? 'bg-green-500 text-white' 
+                : 'bg-red-500 text-white'
+            }`}>
+              {notification.type === 'success' ? (
+                <CheckCircle size={24} />
+              ) : (
+                <AlertCircle size={24} />
+              )}
+              <span className="font-medium">{notification.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20 px-4">
         <div className="max-w-7xl mx-auto">
@@ -108,6 +224,11 @@ const Jobs = () => {
             <p className="text-xl opacity-90 max-w-2xl mx-auto">
               Discover exciting career opportunities that match your skills and aspirations
             </p>
+            {currentUser && (
+              <p className="mt-4 text-sm opacity-80">
+                Signed in as: <span className="font-semibold">{currentUser.email}</span>
+              </p>
+            )}
           </motion.div>
         </div>
       </div>
@@ -190,8 +311,7 @@ const Jobs = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                       whileHover={{ y: -8, scale: 1.02 }}
-                      className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all cursor-pointer group"
-                      onClick={() => setSelectedJob(job)}
+                      className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all group"
                     >
                       {/* Card Header with Gradient */}
                       <div className="h-2 bg-gradient-to-r from-blue-500 to-purple-500"></div>
@@ -203,15 +323,25 @@ const Jobs = () => {
                             <Building2 className="text-blue-600" size={24} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-800 truncate group-hover:text-blue-600 transition-colors">
+                            <h4 className="font-semibold text-gray-800 truncate">
                               {job.company}
                             </h4>
                             <p className="text-xs text-gray-500">Company</p>
                           </div>
                         </div>
 
+                        {/* Applied Badge */}
+                        {job.hasApplied && (
+                          <div className="mb-3">
+                            <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 px-3 py-1.5 rounded-full text-xs font-semibold">
+                              <CheckCircle size={14} />
+                              Already Applied
+                            </span>
+                          </div>
+                        )}
+
                         {/* Job Title */}
-                        <h3 className="text-xl font-bold mb-3 text-gray-800 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                        <h3 className="text-xl font-bold mb-3 text-gray-800 line-clamp-2">
                           {job.title}
                         </h3>
 
@@ -221,7 +351,7 @@ const Jobs = () => {
                         </p>
 
                         {/* Salary */}
-                        <div className="flex items-center gap-2 mb-4 p-3 bg-green-50 rounded-xl">
+                        <div className="flex items-center gap-2 mb-3 p-3 bg-green-50 rounded-xl">
                           <DollarSign className="text-green-600" size={20} />
                           <div>
                             <p className="text-xs text-gray-600">Salary</p>
@@ -231,11 +361,33 @@ const Jobs = () => {
                           </div>
                         </div>
 
-                        {/* View Details Button */}
-                        <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all font-medium flex items-center justify-center gap-2 group-hover:shadow-lg">
-                          View Details
-                          <ExternalLink size={16} />
-                        </button>
+                        {/* Applicants Count */}
+                        <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 rounded-xl">
+                          <Users className="text-blue-600" size={20} />
+                          <div>
+                            <p className="text-xs text-gray-600">Applicants</p>
+                            <p className="font-bold text-blue-700">
+                              {job.applicantCount} {job.applicantCount === 1 ? 'person' : 'people'} applied
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setSelectedJob(job)}
+                            className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl hover:bg-gray-200 transition-all font-medium"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            onClick={() => handleApply(job.id, job.title)}
+                            disabled={applying || job.hasApplied || !currentUser}
+                            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {job.hasApplied ? 'Applied ✓' : applying ? 'Applying...' : 'Apply Now'}
+                          </button>
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -299,6 +451,12 @@ const Jobs = () => {
                         <p className="text-white/90 mt-1">{selectedJob.company}</p>
                       </div>
                     </div>
+                    {selectedJob.hasApplied && (
+                      <span className="inline-flex items-center gap-1.5 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                        <CheckCircle size={14} />
+                        You have applied for this job
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => setSelectedJob(null)}
@@ -311,17 +469,35 @@ const Jobs = () => {
 
               {/* Modal Content */}
               <div className="p-8">
-                {/* Salary Highlight */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6 mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center">
-                      <DollarSign size={32} className="text-white" />
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  {/* Salary */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                        <DollarSign size={24} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Salary Package</p>
+                        <p className="text-xl font-bold text-green-700">
+                          {formatSalary(selectedJob.salary)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Salary Package</p>
-                      <p className="text-3xl font-bold text-green-700">
-                        {formatSalary(selectedJob.salary)}
-                      </p>
+                  </div>
+
+                  {/* Applicants */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                        <Users size={24} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Total Applicants</p>
+                        <p className="text-xl font-bold text-blue-700">
+                          {selectedJob.applicantCount} {selectedJob.applicantCount === 1 ? 'person' : 'people'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -360,8 +536,12 @@ const Jobs = () => {
                   >
                     Close
                   </button>
-                  <button className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-6 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl">
-                    Apply Now
+                  <button
+                    onClick={() => handleApply(selectedJob.id, selectedJob.title)}
+                    disabled={applying || selectedJob.hasApplied || !currentUser}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-6 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {selectedJob.hasApplied ? 'Already Applied ✓' : applying ? 'Applying...' : !currentUser ? 'Sign In to Apply' : 'Apply Now'}
                   </button>
                 </div>
               </div>
