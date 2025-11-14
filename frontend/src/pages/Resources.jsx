@@ -27,6 +27,9 @@ const CourseResources = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [enrolling, setEnrolling] = useState(false);
+  const [enrollingCourseId, setEnrollingCourseId] = useState(null);
+  const [unenrolling, setUnenrolling] = useState(false);
+  const [unenrollingCourseId, setUnenrollingCourseId] = useState(null);
   const [notification, setNotification] = useState(null);
   const [enrolledCourses, setEnrolledCourses] = useState(new Set());
 
@@ -101,6 +104,7 @@ const CourseResources = () => {
 
     try {
       setEnrolling(true);
+      setEnrollingCourseId(courseId);
       const courseRef = doc(db, 'Courses', courseId);
       const courseSnap = await getDoc(courseRef);
       
@@ -153,6 +157,68 @@ const CourseResources = () => {
       showNotification('Failed to enroll. Please try again.', 'error');
     } finally {
       setEnrolling(false);
+      setEnrollingCourseId(null);
+    }
+  };
+
+  // Handle course unenrollment
+  const handleUnenrollment = async (courseId) => {
+    if (!currentUser) {
+      showNotification('Please sign in first', 'error');
+      return;
+    }
+
+    try {
+      setUnenrolling(true);
+      setUnenrollingCourseId(courseId);
+      const courseRef = doc(db, 'Courses', courseId);
+      const courseSnap = await getDoc(courseRef);
+      
+      if (!courseSnap.exists()) {
+        showNotification('Course not found', 'error');
+        return;
+      }
+
+      const courseData = courseSnap.data();
+      
+      // Find the enrollment field with current user's email
+      const enrollmentField = Object.keys(courseData).find(key => 
+        key.startsWith('Enrollment_') && courseData[key] === currentUser.email
+      );
+
+      if (!enrollmentField) {
+        showNotification('You are not enrolled in this course', 'error');
+        return;
+      }
+
+      // Remove enrollment by setting field to empty string
+      await updateDoc(courseRef, {
+        [enrollmentField]: ''
+      });
+
+      // Update local state
+      setCourses(prevCourses =>
+        prevCourses.map(course =>
+          course.id === courseId
+            ? { ...course, enrollments: course.enrollments.filter(email => email !== currentUser.email) }
+            : course
+        )
+      );
+
+      setEnrolledCourses(prev => {
+        const updated = new Set(prev);
+        updated.delete(courseId);
+        return updated;
+      });
+      
+      showNotification('Successfully unenrolled from the course', 'success');
+      setSelectedCourse(null);
+    } catch (error) {
+      console.error('Error unenrolling:', error);
+      showNotification('Failed to unenroll. Please try again.', 'error');
+    } finally {
+      setUnenrolling(false);
+      setUnenrollingCourseId(null);
     }
   };
 
@@ -285,7 +351,7 @@ const CourseResources = () => {
                           disabled={enrolling || !currentUser}
                           className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-4 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {enrolling ? 'Enrolling...' : 'Enroll Now'}
+                          {enrolling && enrollingCourseId === course.id ? 'Enrolling...' : 'Enroll Now'}
                         </button>
                       )}
                     </div>
@@ -308,10 +374,10 @@ const CourseResources = () => {
 
       {/* Course Detail Modal */}
       {selectedCourse && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40 animate-fade-in">
-          <div className="neon-card rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-scale-in shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-40 animate-fade-in backdrop-blur-sm" style={{paddingTop: '80px', paddingBottom: '20px'}}>
+          <div className="bg-[#11152B] border-2 border-primary/40 rounded-2xl max-w-2xl w-full max-h-full overflow-y-auto animate-scale-in shadow-2xl" style={{boxShadow: '0 0 60px rgba(168,85,247,0.4), 0 20px 80px rgba(0,0,0,0.6)'}}>
             {/* Modal Header */}
-            <div className="relative h-64 overflow-hidden">
+            <div className="relative h-52 overflow-hidden rounded-t-2xl">
               <img
                 src={selectedCourse.image}
                 alt={selectedCourse.name}
@@ -320,57 +386,66 @@ const CourseResources = () => {
                   e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800';
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent"></div>
               <button
                 onClick={() => setSelectedCourse(null)}
-                className="absolute top-4 right-4 bg-[rgba(255,255,255,0.1)] hover:bg-[rgba(255,255,255,0.2)] rounded-full p-2 transition-colors backdrop-blur"
+                className="sticky top-2 right-2 float-right bg-gradient-to-r from-[#A855F7] to-[#D500F9] hover:from-[#9333EA] hover:to-[#C026D3] rounded-full p-2 transition-all shadow-lg z-10"
+                style={{boxShadow: '0 0 20px rgba(168,85,247,0.5)'}}
               >
-                <X size={24} className="text-white" />
+                <X size={20} className="text-white" />
               </button>
-              <h2 className="absolute bottom-6 left-6 text-4xl font-bold text-white">
-                {selectedCourse.name}
-              </h2>
+              <div className="absolute bottom-3 left-3 right-3">
+                <h2 className="text-xl sm:text-2xl font-bold text-white" style={{textShadow: '0 4px 20px rgba(0,0,0,0.8)'}}>
+                  {selectedCourse.name}
+                </h2>
+              </div>
             </div>
 
             {/* Modal Content */}
-            <div className="p-8">
+            <div className="p-4 sm:p-6">
               {/* Enrollment Status */}
-              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[rgba(255,255,255,0.1)]">
-                <div className="flex items-center gap-2 text-muted">
-                  <Users size={20} />
-                  <span className="font-medium">{selectedCourse.enrollments.length} students enrolled</span>
+              <div className="flex flex-wrap items-center gap-2 mb-5 pb-4 border-b border-primary/20">
+                <div className="flex items-center gap-2 bg-[rgba(168,85,247,0.1)] px-3 py-1.5 rounded-lg">
+                  <Users size={16} className="text-primary" />
+                  <span className="font-semibold text-main text-sm">{selectedCourse.enrollments.length} students enrolled</span>
                 </div>
                 {enrolledCourses.has(selectedCourse.id) && (
-                  <span className="bg-gradient-to-r from-[#A855F7] to-[#D500F9] text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
-                    <CheckCircle size={16} />
+                  <span className="bg-gradient-to-r from-[#A855F7] to-[#D500F9] text-white px-3 py-1.5 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-lg" style={{boxShadow: '0 0 20px rgba(168,85,247,0.4)'}}>
+                    <CheckCircle size={14} />
                     You're enrolled
                   </span>
                 )}
               </div>
 
               {/* Overview Section */}
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4 glow-text">Course Overview</h3>
-                <p className="text-muted leading-relaxed whitespace-pre-line">
+              <div className="mb-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-5 bg-gradient-to-b from-[#A855F7] to-[#D500F9] rounded-full"></div>
+                  <h3 className="text-lg font-bold text-main">Course Overview</h3>
+                </div>
+                <p className="text-muted text-sm leading-relaxed whitespace-pre-line">
                   {selectedCourse.overview}
                 </p>
               </div>
 
               {/* Outline Section */}
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4 glow-text">Course Outline</h3>
-                <div className="bg-[rgba(255,255,255,0.05)] rounded-xl p-6">
-                  <p className="text-muted leading-relaxed whitespace-pre-line">
+              <div className="mb-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-5 bg-gradient-to-b from-[#A855F7] to-[#D500F9] rounded-full"></div>
+                  <h3 className="text-lg font-bold text-main">Course Outline</h3>
+                </div>
+                <div className="bg-gradient-to-br from-[rgba(168,85,247,0.08)] to-[rgba(213,0,249,0.08)] border border-primary/20 rounded-lg p-3">
+                  <p className="text-muted text-sm leading-relaxed whitespace-pre-line">
                     {selectedCourse.outline}
                   </p>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-primary/20">
                 <button
                   onClick={() => setSelectedCourse(null)}
-                  className="flex-1 btn-outline-neon py-4 px-6"
+                  className="flex-1 bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] border border-primary/30 text-main py-2 px-4 rounded-lg transition-all font-semibold text-sm"
                 >
                   Close
                 </button>
@@ -378,9 +453,10 @@ const CourseResources = () => {
                   <button
                     onClick={() => handleEnrollment(selectedCourse.id)}
                     disabled={enrolling || !currentUser}
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-6 rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gradient-to-r from-[#A855F7] to-[#D500F9] hover:from-[#9333EA] hover:to-[#C026D3] text-white py-2 px-4 rounded-lg transition-all font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                    style={{boxShadow: '0 0 30px rgba(168,85,247,0.4)'}}
                   >
-                    {enrolling ? 'Enrolling...' : currentUser ? 'Enroll in This Course' : 'Sign in to Enroll'}
+                    {enrolling && enrollingCourseId === selectedCourse.id ? 'Enrolling...' : currentUser ? 'Enroll in This Course' : 'Sign in to Enroll'}
                   </button>
                 )}
               </div>
