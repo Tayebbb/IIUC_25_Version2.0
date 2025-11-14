@@ -24,7 +24,10 @@
   box-shadow: 
     0 0 15px rgba(168, 85, 247, 0.6),
     0 0 30px rgba(168, 85, 247, 0.4);
-  transition: all 0.15s ease; /* Faster CSS transition (was 0.3s) */
+  transition: none;
+  will-change: transform;
+  transform: translate3d(0, 0, 0); /* Hardware acceleration */
+  backface-visibility: hidden;
 }
 
 /* Hovering state for dot only */
@@ -40,11 +43,6 @@
 .custom-cursor-dot.clicking {
   transform: scale(0.8);
   background: linear-gradient(135deg, #7C3AED, #6D28D9);
-}
-
-/* Smooth transitions */
-.custom-cursor-dot {
-  will-change: transform, opacity;
 }
 
 /* Responsive behavior */
