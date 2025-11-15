@@ -535,23 +535,11 @@ const Dashboard = () => {
                   Based on your skill gaps from top job matches
                 </p>
               </motion.div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {skillGapResources.slice(0, 3).map((resource, index) => (
                   <SkillGapResourceCard key={resource.id} resource={resource} index={index} />
                 ))}
               </div>
-              {skillGapResources.length > 3 && (
-                <div className="text-center">
-                  <a 
-                    href="/learning-resources" 
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-medium rounded-lg transition-all hover:shadow-lg hover:shadow-purple-500/50"
-                  >
-                    <BookOpen size={20} />
-                    Show All {skillGapResources.length} Resources
-                    <ArrowRight size={20} />
-                  </a>
-                </div>
-              )}
             </>
           ) : (
             <motion.div

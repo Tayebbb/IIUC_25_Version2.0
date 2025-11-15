@@ -87,7 +87,7 @@ const JobMarketInsights = () => {
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-base py-12 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#0A0B14] via-[#13141F] to-[#0A0B14] py-8 px-4">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <motion.div
@@ -95,60 +95,54 @@ const JobMarketInsights = () => {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <div className="text-center mb-8">
-              <h1 className="text-4xl md:text-5xl font-bold glow-text mb-4">
+            <div className="text-center mb-6">
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-3">
                 Bangladesh Job Market Insights 2025
               </h1>
-              <p className="text-muted text-lg max-w-2xl mx-auto">
+              <p className="text-gray-400 text-base max-w-3xl mx-auto">
                 Comprehensive analysis of employment trends, industry growth, and top opportunities
               </p>
             </div>
-          <h1 className="text-4xl md:text-5xl font-bold glow-text mb-4">
-            Bangladesh Job Market Insights 2025
-          </h1>
-          <p className="text-muted text-lg">
-            Youth employment data, industry trends, and top opportunities
-          </p>
-        </motion.div>
+          </motion.div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap justify-center gap-3 mb-10">
           <button
             onClick={() => setActiveTab('employment')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-300 ${
               activeTab === 'employment'
-                ? 'bg-primary text-white shadow-lg'
-                : 'bg-[rgba(255,255,255,0.05)] text-muted hover:bg-[rgba(255,255,255,0.1)]'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/50 scale-105'
+                : 'bg-[rgba(255,255,255,0.05)] text-gray-400 hover:bg-[rgba(255,255,255,0.1)] hover:text-white border border-[rgba(255,255,255,0.1)]'
             }`}
           >
             Employment Rates
           </button>
           <button
             onClick={() => setActiveTab('industry')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-300 ${
               activeTab === 'industry'
-                ? 'bg-primary text-white shadow-lg'
-                : 'bg-[rgba(255,255,255,0.05)] text-muted hover:bg-[rgba(255,255,255,0.1)]'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/50 scale-105'
+                : 'bg-[rgba(255,255,255,0.05)] text-gray-400 hover:bg-[rgba(255,255,255,0.1)] hover:text-white border border-[rgba(255,255,255,0.1)]'
             }`}
           >
             Industry Growth
           </button>
           <button
             onClick={() => setActiveTab('topjobs')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-300 ${
               activeTab === 'topjobs'
-                ? 'bg-primary text-white shadow-lg'
-                : 'bg-[rgba(255,255,255,0.05)] text-muted hover:bg-[rgba(255,255,255,0.1)]'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/50 scale-105'
+                : 'bg-[rgba(255,255,255,0.05)] text-gray-400 hover:bg-[rgba(255,255,255,0.1)] hover:text-white border border-[rgba(255,255,255,0.1)]'
             }`}
           >
             Top Jobs 2025
           </button>
           <button
             onClick={() => setActiveTab('opportunities')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            className={`px-8 py-3 rounded-xl font-semibold transition-all duration-300 ${
               activeTab === 'opportunities'
-                ? 'bg-primary text-white shadow-lg'
-                : 'bg-[rgba(255,255,255,0.05)] text-muted hover:bg-[rgba(255,255,255,0.1)]'
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/50 scale-105'
+                : 'bg-[rgba(255,255,255,0.05)] text-gray-400 hover:bg-[rgba(255,255,255,0.1)] hover:text-white border border-[rgba(255,255,255,0.1)]'
             }`}
           >
             Sector Opportunities
@@ -162,27 +156,27 @@ const JobMarketInsights = () => {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {data.youthEmploymentRates.slice(-6).map((item, index) => (
                 <motion.div
                   key={item.year}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.1 }}
-                  className="neon-card p-6"
+                  className="relative bg-gradient-to-br from-[#1A1B2E] to-[#13141F] rounded-2xl p-6 border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold text-main">{item.year}</h3>
-                    <TrendingUp className="text-primary" size={24} />
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">{item.year}</h3>
+                    <TrendingUp className="text-purple-400" size={28} />
                   </div>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted mb-1">Employment Rate</p>
-                      <p className="text-3xl font-bold text-green-400">{item.employmentRate}%</p>
+                  <div className="space-y-4">
+                    <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
+                      <p className="text-xs text-gray-400 mb-2">Employment Rate</p>
+                      <p className="text-4xl font-bold text-green-400">{item.employmentRate}%</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted mb-1">Unemployment Rate</p>
-                      <p className="text-3xl font-bold text-red-400">{item.unemploymentRate}%</p>
+                    <div className="bg-red-500/10 rounded-xl p-4 border border-red-500/20">
+                      <p className="text-xs text-gray-400 mb-2">Unemployment Rate</p>
+                      <p className="text-4xl font-bold text-red-400">{item.unemploymentRate}%</p>
                     </div>
                   </div>
                 </motion.div>
@@ -206,20 +200,22 @@ const JobMarketInsights = () => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.05 }}
-                  className="neon-card p-6"
+                  className="relative bg-gradient-to-br from-[#1A1B2E] to-[#13141F] rounded-2xl p-6 border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 group"
                 >
-                  <div className="flex items-center gap-3 mb-4">
-                    <BarChart3 className="text-primary" size={24} />
-                    <h3 className="text-lg font-bold text-main">{item.sector}</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted mb-1">Growth Rate</p>
-                      <p className="text-2xl font-bold text-green-400">+{item.growthRate}%</p>
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="bg-purple-500/20 p-3 rounded-xl group-hover:bg-purple-500/30 transition-colors">
+                      <BarChart3 className="text-purple-400" size={24} />
                     </div>
-                    <div>
-                      <p className="text-sm text-muted mb-1">Avg Salary</p>
-                      <p className="text-xl font-bold text-primary">৳{item.averageSalaryBDT.toLocaleString()}</p>
+                    <h3 className="text-xl font-bold text-white">{item.sector}</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
+                      <p className="text-xs text-gray-400 mb-2">Growth Rate</p>
+                      <p className="text-3xl font-bold text-green-400">+{item.growthRate}%</p>
+                    </div>
+                    <div className="bg-purple-500/10 rounded-xl p-4 border border-purple-500/20">
+                      <p className="text-xs text-gray-400 mb-2">Avg Salary</p>
+                      <p className="text-2xl font-bold text-purple-400">৳{item.averageSalaryBDT.toLocaleString()}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -232,43 +228,43 @@ const JobMarketInsights = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
+            className="space-y-5"
           >
             {data.topJobs2025.map((job, index) => (
               <motion.div
                 key={job.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="neon-card p-6"
+                className="relative bg-gradient-to-br from-[#1A1B2E] to-[#13141F] rounded-2xl p-6 border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
               >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
                   <div>
-                    <h3 className="text-xl font-bold text-main mb-2">{job.jobTitle}</h3>
+                    <h3 className="text-xl font-bold text-white mb-3">{job.jobTitle}</h3>
                     <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">
+                      <span className="px-4 py-1.5 bg-purple-500/20 text-purple-400 rounded-full text-sm font-medium border border-purple-500/30">
                         {job.industry}
                       </span>
-                      <span className={`px-3 py-1 rounded-full text-sm border ${getDifficultyColor(job.difficultyLevel)}`}>
+                      <span className={`px-4 py-1.5 rounded-full text-sm font-medium border ${getDifficultyColor(job.difficultyLevel)}`}>
                         {job.difficultyLevel}
                       </span>
-                      <span className={`px-3 py-1 rounded-full text-sm ${getTrendColor(job.hiringTrend)}`}>
-                        {job.hiringTrend}
+                      <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${getTrendColor(job.hiringTrend)}`}>
+                        ↗ {job.hiringTrend}
                       </span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted mb-1">Average Salary</p>
-                    <p className="text-2xl font-bold text-primary">৳{job.avgSalaryBDT.toLocaleString()}</p>
+                  <div className="bg-purple-500/10 rounded-xl p-4 border border-purple-500/20 min-w-[180px]">
+                    <p className="text-xs text-gray-400 mb-1">Average Salary</p>
+                    <p className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">৳{job.avgSalaryBDT.toLocaleString()}</p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted mb-2">Required Skills:</p>
+                <div className="bg-[rgba(0,0,0,0.2)] rounded-xl p-4">
+                  <p className="text-xs text-gray-400 mb-3 font-medium">Required Skills:</p>
                   <div className="flex flex-wrap gap-2">
                     {job.requiredSkills.map((skill, idx) => (
                       <span
                         key={idx}
-                        className="px-3 py-1 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] rounded-lg text-sm text-main"
+                        className="px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg text-sm text-white font-medium hover:border-purple-500/40 transition-colors"
                       >
                         {skill}
                       </span>
@@ -295,23 +291,27 @@ const JobMarketInsights = () => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.05 }}
-                  className="neon-card p-6"
+                  className="relative bg-gradient-to-br from-[#1A1B2E] to-[#13141F] rounded-2xl p-6 border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20 group"
                 >
-                  <div className="flex items-center gap-3 mb-4">
-                    <Target className="text-primary" size={24} />
-                    <h3 className="text-lg font-bold text-main">{item.sector}</h3>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted mb-2">Opportunity Score</p>
-                    <div className="flex items-end gap-2">
-                      <p className="text-4xl font-bold text-primary">{item.opportunityScore}</p>
-                      <p className="text-muted mb-1">/100</p>
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="bg-purple-500/20 p-3 rounded-xl group-hover:bg-purple-500/30 transition-colors">
+                      <Target className="text-purple-400" size={24} />
                     </div>
-                    <div className="mt-3 w-full bg-[rgba(255,255,255,0.1)] rounded-full h-2">
-                      <div
-                        className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${item.opportunityScore}%` }}
-                      ></div>
+                    <h3 className="text-xl font-bold text-white">{item.sector}</h3>
+                  </div>
+                  <div className="bg-[rgba(0,0,0,0.2)] rounded-xl p-5">
+                    <p className="text-xs text-gray-400 mb-3">Opportunity Score</p>
+                    <div className="flex items-end gap-2 mb-4">
+                      <p className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">{item.opportunityScore}</p>
+                      <p className="text-gray-400 text-xl mb-2">/100</p>
+                    </div>
+                    <div className="w-full bg-[rgba(255,255,255,0.1)] rounded-full h-3 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${item.opportunityScore}%` }}
+                        transition={{ duration: 1, delay: index * 0.1 }}
+                        className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full shadow-lg shadow-purple-500/50"
+                      ></motion.div>
                     </div>
                   </div>
                 </motion.div>
