@@ -5,8 +5,8 @@ import { Bot, Sparkles } from 'lucide-react';
 const FloatingAIButton = () => {
   const location = useLocation();
   
-  // Hide button on chatassistance page
-  if (location.pathname === '/chatassistance') {
+  // Hide button on chatassistance page and admin routes
+  if (location.pathname === '/chatassistance' || location.pathname.startsWith('/admin')) {
     return null;
   }
 
