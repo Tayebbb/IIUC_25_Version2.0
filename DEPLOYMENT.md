@@ -34,6 +34,11 @@ This guide will help you deploy the Career Path application to Vercel.
 
 3. **Add Environment Variables** in Vercel dashboard:
 
+   You can either add them manually or import from your `.env` file:
+
+   - Click **Import .env** button and paste the contents of your `frontend/.env` file
+   - Or add them individually:
+
    ```
    VITE_FIREBASE_API_KEY=AIzaSy...
    VITE_FIREBASE_AUTH_DOMAIN=iiuc25.firebaseapp.com
