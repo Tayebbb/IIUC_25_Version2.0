@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from typing import TypedDict, List, Dict, Any
 from typing import Literal
 from dotenv import load_dotenv
 import os
@@ -36,17 +36,15 @@ client = genai.Client(api_key=api_key)
 # Model configuration
 MODEL_NAME = "gemini-2.0-flash"
 
-# Pydantic models
-class Message(BaseModel):
+# Simple type hints to avoid a runtime dependency on pydantic
+class Message(TypedDict, total=False):
     role: Literal["user", "model"]
     content: str
 
-class ChatRequest(BaseModel):
-    message: str
-    history: list[Message] = []
-
-class ChatResponse(BaseModel):
-    reply: str
+# Endpoints will accept plain dicts (JSON) for requests and return plain dicts for responses.
+# Expected shapes:
+#   Chat request JSON: {"message": "<text>", "history": [{"role":"user","content":"..."}, ...]}
+#   Chat response JSON: {"reply": "<text>"}
 
 @app.get("/")
 async def root():
@@ -56,23 +54,23 @@ async def root():
 async def options_chat():
     return {"message": "OK"}
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
+@app.post("/chat")
+async def chat(req: Dict[str, Any]):
     try:
         # Build contents list for Gemini API
         contents = []
         
         # Add conversation history
-        for item in req.history:
+        for item in req.get("history", []):
             contents.append({
-                "role": item.role,
-                "parts": [{"text": item.content}]
+                "role": item.get("role"),
+                "parts": [{"text": item.get("content")}]
             })
         
         # Add current user message
         contents.append({
             "role": "user",
-            "parts": [{"text": req.message}]
+            "parts": [{"text": req.get("message", "")}]
         })
         
         # Call Gemini API
@@ -92,7 +90,7 @@ async def chat(req: ChatRequest):
         if not reply_text:
             reply_text = "I'm sorry, I couldn't generate a response. Please try again."
         
-        return ChatResponse(reply=reply_text)
+        return {"reply": reply_text}
     
     except Exception as e:
         error_message = f"Error talking to Gemini: {str(e)}"

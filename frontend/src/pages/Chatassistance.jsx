@@ -51,14 +51,14 @@ export default function Chatassistance() {
   // Save messages to Firebase
   const saveChatHistory = async (messagesToSave) => {
     if (!currentUser) return;
-    
+
     try {
       setIsSaving(true);
       const chatDocRef = doc(db, "users", currentUser.uid, "chatHistory", "conversations");
-      
+
       // Check if document exists
       const docSnap = await getDoc(chatDocRef);
-      
+
       if (docSnap.exists()) {
         // Update existing document with new messages
         await updateDoc(chatDocRef, {
@@ -85,11 +85,11 @@ export default function Chatassistance() {
   // Load chat history from Firebase
   const loadChatHistory = async () => {
     if (!currentUser) return;
-    
+
     try {
       const chatDocRef = doc(db, "users", currentUser.uid, "chatHistory", "conversations");
       const docSnap = await getDoc(chatDocRef);
-      
+
       if (docSnap.exists()) {
         const data = docSnap.data();
         // Keep the initial greeting and add saved messages (skip the default greeting if it exists)
@@ -112,7 +112,7 @@ export default function Chatassistance() {
   // Clear chat history
   const clearChatHistory = async () => {
     if (!currentUser) return;
-    
+
     if (!window.confirm("Are you sure you want to clear all chat history?")) {
       return;
     }
@@ -125,7 +125,7 @@ export default function Chatassistance() {
         createdAt: serverTimestamp(),
         lastUpdated: serverTimestamp(),
       });
-      
+
       // Reset messages to initial state
       setMessages([
         { role: "model", content: "Hi! I'm a Gemini-powered chatbot. I'm here to help you with questions about youth development, skill development, job opportunities, and career guidance. How can I assist you?" }
@@ -191,7 +191,7 @@ export default function Chatassistance() {
     ];
 
     // Check if any allowed topic is in the message
-    const hasRelevantTopic = allowedTopics.some(topic => 
+    const hasRelevantTopic = allowedTopics.some(topic =>
       lowerMessage.includes(topic.toLowerCase())
     );
 
@@ -209,8 +209,8 @@ export default function Chatassistance() {
     if (!isTopicRelevant(userMessage)) {
       const restrictedMessages = [
         { role: "user", content: userMessage },
-        { 
-          role: "model", 
+        {
+          role: "model",
           content: "⚠️ Please include at least one relevant keyword from the list below in your question. Your message must contain words like: job, career, skill, interview, resume, training, learning, development, guidance, opportunity, etc. These keywords help me understand your career-related query better! 🎯",
           isRestricted: true,
           showKeywords: true
@@ -251,11 +251,11 @@ export default function Chatassistance() {
       }
 
       const data = await res.json();
-      
+
       // Add bot response
       const updatedMessages = [...newMessages, { role: "model", content: data.reply }];
       setMessages(updatedMessages);
-      
+
       // Save to Firebase
       if (currentUser) {
         await saveChatHistory(updatedMessages);
@@ -268,7 +268,7 @@ export default function Chatassistance() {
         { role: "model", content: "Sorry, something went wrong talking to the server. Please try again." }
       ];
       setMessages(errorMessages);
-      
+
       // Save error state to Firebase
       if (currentUser) {
         await saveChatHistory(errorMessages);
@@ -288,7 +288,7 @@ export default function Chatassistance() {
   return (
     <div style={styles.container}>
       {/* Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         style={styles.header}
@@ -358,7 +358,7 @@ export default function Chatassistance() {
                   </div>
                 )}
                 <p style={{ margin: "0 0 12px 0", lineHeight: "1.5" }}>{msg.content}</p>
-                
+
                 {msg.showKeywords && (
                   <div style={styles.keywordsContainer}>
                     <p style={{ margin: "12px 0 8px 0", fontSize: "13px", fontWeight: "600", color: "#FCD34D" }}>📌 Relevant Keywords:</p>
@@ -379,7 +379,7 @@ export default function Chatassistance() {
           ))}
         </AnimatePresence>
         {loading && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             style={{ ...styles.messageRow, justifyContent: "flex-start" }}
@@ -388,16 +388,16 @@ export default function Chatassistance() {
               <Bot size={18} style={{ color: '#A855F7' }} />
             </div>
             <div style={{ ...styles.messageBubble, ...styles.modelBubble, ...styles.typingIndicator }}>
-              <span style={{...styles.dot, animationDelay: '0s'}}></span>
-              <span style={{...styles.dot, animationDelay: '0.2s'}}></span>
-              <span style={{...styles.dot, animationDelay: '0.4s'}}></span>
+              <span style={{ ...styles.dot, animationDelay: '0s' }}></span>
+              <span style={{ ...styles.dot, animationDelay: '0.2s' }}></span>
+              <span style={{ ...styles.dot, animationDelay: '0.4s' }}></span>
             </div>
           </motion.div>
         )}
       </div>
 
       {/* Input Area */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         style={styles.inputArea}
@@ -412,15 +412,15 @@ export default function Chatassistance() {
             rows={1}
             disabled={loading}
           />
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={sendMessage} 
+            onClick={sendMessage}
             style={{
               ...styles.button,
               opacity: loading || !input.trim() ? 0.5 : 1,
               cursor: loading || !input.trim() ? 'not-allowed' : 'pointer'
-            }} 
+            }}
             disabled={loading || !input.trim()}
           >
             <Send size={20} />
