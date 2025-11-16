@@ -230,42 +230,29 @@ export default function Chatassistance() {
     setLoading(true);
 
     try {
-      // Build history for Gemini API
+      // Build history (excluding the current user message)
       const history = messages.map(m => ({
-        role: m.role === "model" ? "model" : "user",
-        parts: [{ text: m.content }],
+        role: m.role,
+        content: m.content,
       }));
 
-      // Call Gemini API directly using v1 endpoint
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              ...history,
-              {
-                role: "user",
-                parts: [{ text: userMessage }],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1024,
-            },
-          }),
-        }
-      );
+      // Call backend API
+      const apiUrl = import.meta.env.VITE_API_URL || "https://backendcareerpath.vercel.app";
+      const res = await fetch(`${apiUrl}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMessage,
+          history,
+        }),
+      });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Gemini API error:", res.status, errorData);
-        throw new Error(`API error: ${res.status}`);
+        throw new Error(`Server error: ${res.status}`);
       }
 
       const data = await res.json();
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.";
+      const reply = data.reply;
 
       // Add bot response
       const updatedMessages = [...newMessages, { role: "model", content: reply }];
