@@ -547,7 +547,6 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    marginBottom: "8px",
     padding: "8px 12px",
     background: "rgba(251,146,60,0.2)",
     borderRadius: "8px",
